@@ -1,6 +1,13 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, ViewChild } from '@angular/core';
 import { Params, ActivatedRoute } from '@angular/router';
 import { Location } from '@angular/common';
+import {
+  FormBuilder,
+  FormControl,
+  FormGroup,
+  Validators,
+} from '@angular/forms';
+import { Comment } from '../shared/comment';
 
 import { Dish } from '../shared/dish';
 import { DishService } from '../services/dish.service';
@@ -16,13 +23,81 @@ export class DishdetailComponent implements OnInit {
   constructor(
     private dishService: DishService,
     private route: ActivatedRoute,
-    private location: Location
-  ) {}
+    private location: Location,
+    private fb: FormBuilder
+  ) {
+    this.createForm();
+  }
 
   dish!: Dish;
   dishIds!: string[];
   prev!: string;
   next!: string;
+  commentForm!: FormGroup;
+  comment!: Comment;
+  @ViewChild('fform')
+  commentFormDirective!: { resetForm: () => void };
+
+  formErrors: any = {
+    author: '',
+    comment: '',
+  };
+
+  validationMessages: any = {
+    author: {
+      required: 'Author Name is required.',
+      minlength: 'Author Name must be at least 2 characters long.',
+      maxlength: 'Author Name cannot be more than 25 characters long.',
+    },
+    comment: {
+      required: 'Comment is required.',
+      minlength: 'Comment must be at least 2 characters long.',
+    },
+  };
+
+  createForm() {
+    this.commentForm = this.fb.group({
+      rating: new FormControl('5'),
+      comment: ['', [Validators.required, Validators.minLength(2)]],
+      author: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(2),
+          Validators.maxLength(25),
+        ],
+      ],
+      date: '',
+    });
+
+    this.commentForm.valueChanges.subscribe((data) =>
+      this.onValueChanged(data)
+    );
+
+    this.onValueChanged(); // (re)set form validation messages
+  }
+
+  onValueChanged(data?: any) {
+    if (!this.commentForm) {
+      return;
+    }
+    const form = this.commentForm;
+    for (const field in this.formErrors) {
+      if (this.formErrors.hasOwnProperty(field)) {
+        // clear previous error message (if any)
+        this.formErrors[field] = '';
+        const control = form.get(field);
+        if (control && control.dirty && !control.valid) {
+          const messages = this.validationMessages[field];
+          for (const key in control.errors) {
+            if (control.errors.hasOwnProperty(key)) {
+              this.formErrors[field] += messages[key] + ' ';
+            }
+          }
+        }
+      }
+    }
+  }
 
   ngOnInit(): void {
     // snapshot: current value of the route
@@ -55,5 +130,29 @@ export class DishdetailComponent implements OnInit {
 
   goBack(): void {
     this.location.back();
+  }
+
+  onSubmit() {
+    var now = new Date();
+    this.commentForm.setValue({
+      rating: this.commentForm.get('rating')!.value,
+      comment: this.commentForm.get('comment')!.value,
+      author: this.commentForm.get('author')!.value,
+      date: now.toISOString(),
+    });
+    this.comment = this.commentForm.value;
+    console.log(this.comment);
+    this.dish.comments.push(this.comment);
+
+    // this is to ensure that the feedbackForm is completely reset to its
+    // prestine value at this point.
+    this.commentFormDirective.resetForm();
+
+    this.commentForm.reset({
+      rating: '5',
+      author: '',
+      comment: '',
+      date: '',
+    });
   }
 }
