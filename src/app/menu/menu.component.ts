@@ -11,6 +11,7 @@ import { DishService } from '../services/dish.service';
 })
 export class MenuComponent implements OnInit {
   dishes!: Dish[];
+  errMess!: string;
 
   constructor(
     private dishService: DishService,
@@ -19,6 +20,11 @@ export class MenuComponent implements OnInit {
 
   ngOnInit(): void {
     // this.dishService.getDishes().then((dishes) => (this.dishes = dishes));
-    this.dishService.getDishes().subscribe((dishes) => (this.dishes = dishes));
+    this.dishService.getDishes().subscribe(
+      (dishes) => (this.dishes = dishes),
+      (errmess) => (this.errMess = <any>errmess)
+    );
+    // The subscribe method, right now we have only specified one function here.
+    // We can also specify a second function which will be called when the error results.
   }
 }
