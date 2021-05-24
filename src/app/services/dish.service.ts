@@ -66,7 +66,7 @@ export class DishService {
     // return of(DISHES.filter((dish) => dish.featured)[0]).pipe(delay(2000));
 
     return this.http
-      .get<Dish[]>(baseURL + 'dishes?featuresd=true')
+      .get<Dish[]>(baseURL + 'dishes?featured=true')
       .pipe(map((dishes) => dishes[0]))
       .pipe(catchError(this.processHTTPMsgService.handleError));
   }

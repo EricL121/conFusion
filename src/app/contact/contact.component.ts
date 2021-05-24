@@ -1,7 +1,8 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, Inject, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Feedback, ContactType } from '../shared/feedback';
-import { flyInOut } from '../animations/app.animation';
+import { flyInOut, visibility, expand } from '../animations/app.animation';
+import { FeedbackService } from '../services/feedback.service';
 
 @Component({
   selector: 'app-contact',
@@ -11,14 +12,17 @@ import { flyInOut } from '../animations/app.animation';
     '[@flyInOut]': 'true',
     style: 'display: block;',
   },
-  animations: [flyInOut()],
+  animations: [visibility(), flyInOut(), expand()],
 })
 export class ContactComponent implements OnInit {
   feedbackForm!: FormGroup;
   feedback!: Feedback;
+  feedbackCopy!: Feedback;
   contactType = ContactType;
+  errMess!: string;
   @ViewChild('fform')
   feedbackFormDirective!: { resetForm: () => void };
+  visibility = 'shown';
 
   formErrors: any = {
     firstname: '',
@@ -48,7 +52,11 @@ export class ContactComponent implements OnInit {
     },
   };
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private feedbackService: FeedbackService,
+    @Inject('BaseURL') public BaseURL: string
+  ) {
     this.createForm();
   }
 
@@ -108,13 +116,60 @@ export class ContactComponent implements OnInit {
     }
   }
 
+  // onSubmit() {
+  //   // can use this .value easily
+  //   // cos it happens that feedbackForm has exactly the same properties
+  //   // as feedback object. If not, need to do the mapping explicitly
+  //   // for each attributes.
+  //   this.feedback = this.feedbackForm.value;
+  //   console.log(this.feedback);
+  //   this.feedbackForm.reset({
+  //     firstname: '',
+  //     lastname: '',
+  //     telnum: 0,
+  //     email: '',
+  //     agree: false,
+  //     contacttype: 'None',
+  //     message: '',
+  //   });
+
+  //   // this is to ensure that the feedbackForm is completely reset to its
+  //   // prestine value at this point.
+  //   this.feedbackFormDirective.resetForm();
+  // }
+
   onSubmit() {
-    // can use this .value easily
-    // cos it happens that feedbackForm has exactly the same properties
-    // as feedback object. If not, need to do the mapping explicitly
-    // for each attributes.
-    this.feedback = this.feedbackForm.value;
-    console.log(this.feedback);
+    this.feedbackForm.setValue({
+      firstname: this.feedbackForm.get('firstname')!.value,
+      lastname: this.feedbackForm.get('lastname')!.value,
+      telnum: this.feedbackForm.get('telnum')!.value,
+      email: this.feedbackForm.get('email')!.value,
+      agree: this.feedbackForm.get('agree')!.value,
+      contacttype: this.feedbackForm.get('contacttype')!.value,
+      message: this.feedbackForm.get('message')!.value,
+    });
+
+    this.feedbackCopy = this.feedbackForm.value;
+    this.feedback = null!;
+    this.feedbackForm = null!;
+
+    this.feedbackService.submitFeedback(this.feedbackCopy).subscribe(
+      (feedback) => {
+        this.feedback = feedback;
+      },
+      (errmess) => {
+        this.feedback = null!;
+        this.errMess = <any>this.errMess;
+      }
+    );
+
+    setTimeout(() => {
+      this.feedback = null!;
+      this.createForm();
+    }, 7000);
+
+    // this is to ensure that the feedbackForm is completely reset to its
+    // prestine value at this point.
     this.feedbackForm.reset({
       firstname: '',
       lastname: '',
@@ -124,9 +179,5 @@ export class ContactComponent implements OnInit {
       contacttype: 'None',
       message: '',
     });
-
-    // this is to ensure that the feedbackForm is completely reset to its
-    // prestine value at this point.
-    this.feedbackFormDirective.resetForm();
   }
 }
